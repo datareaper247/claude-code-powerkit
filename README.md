@@ -10,6 +10,30 @@ A comprehensive collection of 800+ skills, 251 agents, and 67 plugins for Claude
 | **Agents** | 251 | Specialized AI assistants for specific domains |
 | **Plugins** | 67 | Modular packages with commands, skills, and MCP servers |
 | **Repositories** | 36 | Curated from top GitHub projects |
+| **MCP Servers** | 8+ | Gemini CLI, mobile dev, memory, and more |
+
+## New: Advanced Features
+
+### Gemini CLI Integration
+Claude automatically delegates to Gemini for massive context (1M+ tokens), real-time search, and second opinions.
+- Uses Google login (no API keys)
+- Auto-triggers for large files, codebase analysis, uncertainty
+- See `docs/POWERKIT-ENHANCEMENTS.md` for details
+
+### Autonomous Agents
+AutoGPT-like continuous loops for long-running tasks:
+- **continuous-claude**: PR automation, CI monitoring
+- **ralph**: Tmux dashboard, rate limiting
+
+### Mobile Development
+React Native, iOS Simulator, Android Emulator automation:
+- `mobile-mcp`: Cross-platform control
+- `ios-simulator`: Recording, screenshots, UI automation
+
+### Containerization
+Safe sandboxed execution with `claude-code-sandbox`:
+- Run with `--dangerously-skip-permissions` safely
+- Docker isolation, 500+ dev tools via asdf
 
 ## Quick Start
 

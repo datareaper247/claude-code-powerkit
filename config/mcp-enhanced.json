@@ -1,0 +1,66 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users"],
+      "description": "Filesystem access for development"
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE_PATH": "/Users/fsd/.claude/memory.json"
+      },
+      "description": "Persistent memory and context management"
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "description": "GitHub integration for PRs, issues, CI"
+    },
+    "mobile-mcp": {
+      "command": "npx",
+      "args": ["-y", "@mobilenext/mobile-mcp@latest"],
+      "description": "Cross-platform mobile automation (iOS + Android)"
+    },
+    "ios-simulator": {
+      "command": "npx",
+      "args": ["-y", "ios-simulator-mcp"],
+      "env": {
+        "IOS_SIMULATOR_MCP_DEFAULT_OUTPUT_DIR": "~/Downloads"
+      },
+      "description": "iOS Simulator control, screenshots, video recording"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-playwright"],
+      "description": "Browser automation and testing"
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      },
+      "description": "Web search capabilities"
+    },
+    "time": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-time"],
+      "description": "Time and date operations"
+    }
+  },
+  "_comment": "Enhanced MCP config with mobile development support. Load with: claude --mcp-config ~/.config/claude/mcp-enhanced.json",
+  "_setup": {
+    "required_env_vars": ["GITHUB_TOKEN"],
+    "optional_env_vars": ["BRAVE_API_KEY"],
+    "macos_only": ["ios-simulator"],
+    "prerequisites": {
+      "ios-simulator": "Xcode with iOS Simulator",
+      "mobile-mcp": "Xcode (iOS) or Android Studio (Android)"
+    }
+  }
+}
