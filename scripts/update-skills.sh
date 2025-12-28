@@ -82,6 +82,25 @@ declare -A REPOS=(
     # Video & Media
     ["tillo13-video-creator"]="https://github.com/tillo13/ai_video_creator.git"
     ["davide97l-video-generator"]="https://github.com/davide97l/ai-video-generator.git"
+
+    # Entrepreneur & Startup
+    ["rsmdt-the-startup"]="https://github.com/rsmdt/the-startup.git"
+    ["incomestreamsurf-saas-starter"]="https://github.com/IncomeStreamSurfer/claude-code-saas-starter.git"
+    ["svenja-claude-code-skills"]="https://github.com/Svenja-dev/claude-code-skills.git"
+    ["nicholasspisak-subagents"]="https://github.com/NicholasSpisak/claude-code-subagents.git"
+    ["chrisroyse-610subagents"]="https://github.com/ChrisRoyse/610ClaudeSubagents.git"
+    ["nategarelik-agentic-startup"]="https://github.com/nategarelik/agentic-startup-claude-config.git"
+
+    # Indie Hacker Resources
+    ["awesome-indiehackers"]="https://github.com/johackim/awesome-indiehackers.git"
+    ["awesome-indie"]="https://github.com/mezod/awesome-indie.git"
+    ["awesome-indie-maker"]="https://github.com/ljinkai/awesome-indie-maker.git"
+    ["awesome-saas-boilerplates"]="https://github.com/tyaga001/awesome-saas-boilerplates-and-starter-kits.git"
+    ["awesome-opensource-boilerplates"]="https://github.com/EinGuterWaran/awesome-opensource-boilerplates.git"
+
+    # SaaS Boilerplates
+    ["next-supabase-stripe-starter"]="https://github.com/KolbySisk/next-supabase-stripe-starter.git"
+    ["saas-kit-supabase"]="https://github.com/Saas-Starter-Kit/Saas-Kit-supabase.git"
 )
 
 updated=0

@@ -165,13 +165,165 @@ For video work, use skills from:
 - `tillo13-ai-video-creator` - Flux + RunwayML + Suno
 - `davide97l-ai-video-generator` - FFmpeg + MoviePy
 
-## Entrepreneur Mode
+## Entrepreneur Mode (Solo Founder / Indie Hacker)
 
-When working on business/product tasks:
-- Use CEO/CTO advisor skills for strategic decisions
-- Use market-researcher and competitive-analyst skills
-- Track decisions with memory-keeper for continuity
-- Use business-analytics plugin for metrics
+### Market Research MCPs (Always Active)
+
+**Reddit Research** - Problem discovery & validation:
+- Scrape pain points from target subreddits
+- Find "I wish there was..." and "I hate when..." posts
+- Analyze competitor discussions
+- Identify underserved niches
+
+**HackerNews** - Tech trends & startup signals:
+- Track Show HN launches and reception
+- Identify emerging technologies
+- Find technical co-founder perspectives
+- Spot B2B opportunities
+
+**Firecrawl** - Competitive intelligence:
+- Scrape competitor websites
+- Extract pricing pages
+- Analyze feature lists
+- Monitor landing page changes
+
+### Problem Discovery Workflow
+
+1. **Identify Pain Points**:
+   ```
+   Use reddit MCP → search subreddits for complaints
+   Use hackernews MCP → find frustrated comments
+   Save findings: context_save with category "note", key "pain-points-{domain}"
+   ```
+
+2. **Validate Problem Size**:
+   ```
+   Search volume analysis (use seo MCP)
+   Reddit subscriber counts in relevant subreddits
+   Competitor revenue estimates (search for "revenue", "MRR", "ARR")
+   ```
+
+3. **Document Insights**:
+   ```
+   context_journal_entry with tags: ["market-research", "{product-name}"]
+   context_link source problems to potential solutions
+   ```
+
+### Competitive Analysis Workflow
+
+1. **Identify Competitors**:
+   - Search ProductHunt for similar launches
+   - Reddit mentions of alternatives
+   - Google "best {category} tools"
+
+2. **Deep Dive Analysis**:
+   ```
+   Use firecrawl → scrape competitor sites
+   Extract: pricing, features, positioning, testimonials
+   Save: context_save key "competitor-{name}" category "note"
+   ```
+
+3. **Find Gaps**:
+   - Missing features from user complaints
+   - Pricing tier gaps
+   - Underserved segments
+   - Poor UX areas
+
+### Cutthroat Tactics & Hacks
+
+**Idea Validation (Before Building)**:
+- Create landing page, run $50 ads, measure signups
+- Post in relevant subreddits asking "would you pay for X?"
+- DM 20 potential customers, offer early access
+
+**Launch Hacks**:
+- ProductHunt launch checklist (hunter, timing, assets)
+- HackerNews Show HN best practices
+- Reddit soft launches in relevant communities
+- Twitter/X build in public threads
+
+**Growth Hacks**:
+- SEO content targeting competitor keywords
+- Lifetime deals for early traction
+- Affiliate programs for distribution
+- Integration partnerships
+
+**Pricing Strategy**:
+- Use `pricing-strategist` agent for optimization
+- Analyze competitor pricing with firecrawl
+- Test pricing with landing page variants
+
+### SaaS Building Workflow
+
+**Phase 1: Validation (1-2 weeks)**
+1. Problem research with Reddit/HN MCPs
+2. Competitor analysis with Firecrawl
+3. Landing page + waitlist
+4. 20 customer interviews
+5. Decision: Build or pivot
+
+**Phase 2: MVP (2-4 weeks)**
+1. Use `/setup-boilerplate` from saas-starter
+2. Core feature only (no polish)
+3. Deploy to production immediately
+4. Get 5 paying customers
+
+**Phase 3: Product-Market Fit**
+1. Track retention metrics
+2. Weekly customer calls
+3. Iterate based on feedback
+4. Hit 40% "very disappointed" threshold
+
+**Phase 4: Growth**
+1. Content marketing (SEO)
+2. Paid acquisition experiments
+3. Referral/affiliate programs
+4. Feature expansion based on data
+
+### Business Agents Available
+
+| Task | Agent | Use For |
+|------|-------|---------|
+| Strategy | `ceo-advisor` | Board prep, fundraising, pivots |
+| Technical | `cto-advisor` | Architecture, hiring, tech debt |
+| Marketing | `marketing-strategy-pmm` | GTM, positioning, messaging |
+| Pricing | `pricing-strategist` | Pricing tiers, competitor analysis |
+| Competition | `competitive-analyst` | Market mapping, SWOT |
+| Growth | `growth-hacker` | Acquisition, activation, retention |
+| Product | `product-manager` | Roadmap, prioritization |
+| Research | `market-researcher` | TAM/SAM/SOM, trends |
+
+### Quick Commands
+
+```bash
+# Install The Agentic Startup
+/plugin marketplace add rsmdt/the-startup
+/plugin install start@the-startup
+
+# Start new product research
+# (Claude will use Reddit, HN, Firecrawl MCPs automatically)
+
+# Generate SaaS boilerplate
+/setup-boilerplate
+```
+
+### Decision Tracking
+
+All business decisions should be saved for continuity:
+```
+context_save key: "decision-{date}-{topic}"
+category: "decision"
+priority: "high"
+value: "Decision made, rationale, alternatives considered"
+```
+
+### Reference Resources
+
+Installed awesome lists for reference:
+- `awesome-indiehackers` - Complete toolkit
+- `awesome-indie` - Making money as dev
+- `awesome-saas-boilerplates` - Starter templates
+- `awesome-opensource-boilerplates` - Free foundations
 
 ## Updates
 
