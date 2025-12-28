@@ -6,7 +6,7 @@ Complete toolkit for building and launching B2B/B2C SaaS, micro-SaaS, and apps w
 
 ### Reddit Research
 ```bash
-claude mcp add --scope user reddit -- npx mcp-server-reddit
+claude mcp add --scope user reddit -- npx -y mcp-reddit
 ```
 
 **Capabilities**:
@@ -24,7 +24,7 @@ claude mcp add --scope user reddit -- npx mcp-server-reddit
 
 ### HackerNews
 ```bash
-claude mcp add --scope user hackernews -- npx hacker-news-mcp
+claude mcp add --scope user hackernews -- npx -y mcp-hacker-news
 ```
 
 **Capabilities**:
@@ -40,9 +40,17 @@ claude mcp add --scope user hackernews -- npx hacker-news-mcp
 "What are people saying about AI startups this week?"
 ```
 
-### Firecrawl (Web Scraping)
+### Web Scraping (Jina or Firecrawl)
+
+**Option A: Jina (Free, no API key)**
 ```bash
-claude mcp add --scope user firecrawl -- npx firecrawl-mcp
+claude mcp add --scope user jina -- npx -y jina-mcp-tools
+```
+
+**Option B: Firecrawl (Requires API key)**
+```bash
+export FIRECRAWL_API_KEY=your_key_here
+claude mcp add --scope user firecrawl -- npx -y firecrawl-mcp
 ```
 
 **Capabilities**:
@@ -50,6 +58,7 @@ claude mcp add --scope user firecrawl -- npx firecrawl-mcp
 - Extract pricing pages
 - Monitor landing page changes
 - Analyze feature lists
+- Convert web pages to clean markdown
 
 **Usage**:
 ```
@@ -282,9 +291,9 @@ context_timeline groupBy: "week"
 
 ### MCP Installation
 ```bash
-claude mcp add --scope user reddit -- npx mcp-server-reddit
-claude mcp add --scope user hackernews -- npx hacker-news-mcp
-claude mcp add --scope user firecrawl -- npx firecrawl-mcp
+claude mcp add --scope user reddit -- npx -y mcp-reddit
+claude mcp add --scope user hackernews -- npx -y mcp-hacker-news
+claude mcp add --scope user jina -- npx -y jina-mcp-tools  # Free alternative to firecrawl
 ```
 
 ### Plugin Installation

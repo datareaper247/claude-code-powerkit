@@ -218,7 +218,7 @@ For video work, use skills from:
 
 2. **Deep Dive Analysis**:
    ```
-   Use firecrawl → scrape competitor sites
+   Use jina or firecrawl → scrape competitor sites
    Extract: pricing, features, positioning, testimonials
    Save: context_save key "competitor-{name}" category "note"
    ```
@@ -250,7 +250,7 @@ For video work, use skills from:
 
 **Pricing Strategy**:
 - Use `pricing-strategist` agent for optimization
-- Analyze competitor pricing with firecrawl
+- Analyze competitor pricing with jina/firecrawl
 - Test pricing with landing page variants
 
 ### SaaS Building Workflow

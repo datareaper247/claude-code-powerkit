@@ -139,7 +139,7 @@
 ### Use MCPs For
 - `reddit`: Problem discovery, validation
 - `hackernews`: Trend spotting, tech validation
-- `firecrawl`: Competitor scraping
+- `jina`: Web scraping, competitor analysis (free, no API key)
 - `context7`: Tech documentation
 
 ### Memory Management
