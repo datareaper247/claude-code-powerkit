@@ -10,16 +10,19 @@
 # Start Claude with context
 powerkit start .
 
+# Start with base layer (sandbox + mobile)
+powerkit full
+
 # Check system health
-powerkit status
+powerkit doctor
 
 # Switch models
 powerkit opus          # Heavy thinking ($15/1M)
 powerkit sonnet        # Default coding ($3/1M)
 powerkit haiku         # Validation ($0.25/1M)
 
-# Parallel execution (4 terminals)
-powerkit parallel .
+# Boris's 5-terminal workflow
+powerkit parallel --boris
 
 # Initialize new project
 powerkit init /path/to/project
@@ -279,36 +282,66 @@ cat ~/.claude/settings.json
 
 ---
 
-## Parallel Execution
+## Parallel Execution (Boris's 5-Terminal Technique)
 
-### Quick Start (4 Terminals)
-```bash
-powerkit parallel /path/to/project
-# or
-~/.claude/scripts/parallel-claude.sh /path/to/project
+### Layered Architecture
+```
+┌─────────────────────────────────────────────────┐
+│            OPTIONAL: AUTONOMOUS                  │
+│          Ralph / continuous-claude               │
+├─────────────────────────────────────────────────┤
+│          PARALLEL EXECUTION LAYER                │
+│    Boris's 5-Terminal Technique (--boris)        │
+│  T1:Plan │ T2:Review │ T3:Feat │ T4:Feat │ T5:Fix │
+├─────────────────────────────────────────────────┤
+│               BASE LAYER                         │
+│       Sandbox + Happy Coder (powerkit full)      │
+├─────────────────────────────────────────────────┤
+│            FOUNDATION: MCP SERVERS               │
+│  memory-keeper │ context7 │ gemini-cli │ mobile  │
+└─────────────────────────────────────────────────┘
 ```
 
-### Manual Git Worktrees
+### Boris's 5-Terminal Setup
 ```bash
-cd /path/to/project
-git worktree add ../proj-feature feature/new-thing
-git worktree add ../proj-tests tests/coverage
-git worktree add ../proj-docs docs/update
-git worktree add ../proj-fixes fix/bugs
+powerkit parallel --boris         # Creates 5 worktrees with proper roles
 ```
 
-### Terminal Layout
-| Terminal | Branch | Purpose |
-|----------|--------|---------|
-| T1 | feature/* | Implementation |
-| T2 | tests/* | Test coverage |
-| T3 | docs/* | Documentation |
-| T4 | fix/* | Bug fixes |
+| Terminal | Directory Suffix | Role | Workflow |
+|----------|------------------|------|----------|
+| **T1** | `-orchestrator` | Planner | Plan Mode (Shift+Tab×2), coordinate |
+| **T2** | `-review` | Reviewer | Code review, PR review, quality gates |
+| **T3** | `-feature-a` | Feature A | Primary implementation |
+| **T4** | `-feature-b` | Feature B | Parallel feature (no conflicts) |
+| **T5** | `-fixes` | Fixes | Bug fixes, polish, overnight Ralph |
 
-### Cleanup
+### Workflow
 ```bash
+# 1. T1: Create plan (Shift+Tab twice for Plan Mode)
+# 2. T3/T4: Execute plan (auto-accept mode after T1 approval)
+# 3. T2: Review PRs from T3/T4/T5
+# 4. T5: Quick fixes, or run autonomous overnight
+```
+
+### Simple 4-Terminal Setup
+```bash
+powerkit parallel /path/to/project  # Without --boris flag
+```
+
+### Cleanup Worktrees
+```bash
+powerkit cleanup                  # Interactive removal
+# or manually:
 git worktree remove ../proj-feature
 git worktree prune
+```
+
+### Combined Base Layer Start
+```bash
+powerkit full                     # Sandbox + mobile access base
+# Then in each terminal:
+cd ../project-orchestrator && powerkit start .
+cd ../project-feature-a && powerkit start .
 ```
 
 ---
@@ -414,6 +447,21 @@ claude-extract --all --output ~/backup/claude-$(date +%Y%m%d)
 
 ## Quick Workflows
 
+### Day Start (Full Stack)
+```bash
+# 1. Start base layer
+powerkit full
+
+# 2. Create 5-terminal setup
+powerkit parallel --boris
+
+# 3. In T1 (Orchestrator): Create plan
+# Use Plan Mode (Shift+Tab twice)
+# "Review yesterday's progress, plan today's work"
+
+# 4. T3/T4 execute, T2 reviews, T5 handles quick fixes
+```
+
 ### Bug Fix
 ```bash
 powerkit start .
@@ -437,12 +485,17 @@ powerkit sonnet              # Switch to implementation
 # Or: ask gemini to review @src/
 ```
 
-### Autonomous Task
+### Overnight Autonomous (T5)
 ```bash
-ralph-setup batch-tests
-cd batch-tests
-echo "Add unit tests to all files in src/" > PROMPT.md
-ralph --monitor --timeout 60
+# In T5 fixes terminal, before leaving:
+powerkit autonomous "refactor auth module following new patterns"
+# Or with continuous-claude:
+continuous-claude --prompt "add missing tests" --max-cost 50.00
+```
+
+### Cleanup After Session
+```bash
+powerkit cleanup              # Interactive worktree removal
 ```
 
 ---

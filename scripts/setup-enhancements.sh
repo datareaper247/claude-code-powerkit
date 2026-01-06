@@ -99,9 +99,39 @@ else
     success "Ralph installed"
 fi
 
-# 7. Clone Computer Use Reference Implementation
+# 7. Install Happy Coder (Mobile Access)
 echo ""
-echo "7. Cloning Computer Use Reference..."
+echo "7. Installing Happy Coder (Mobile Access)..."
+if command -v happy &> /dev/null; then
+    success "Happy Coder already installed"
+else
+    npm install -g happy-coder 2>/dev/null || warn "Happy Coder install failed (may need sudo)"
+    success "Happy Coder installed"
+    echo "   Download mobile app from App Store or Google Play"
+    echo "   Run 'happy' and scan QR code to connect"
+fi
+
+# 8. Setup PowerKit Sandbox (Permission Whitelist)
+echo ""
+echo "8. Setting up PowerKit Sandbox..."
+POWERKIT_DIR="$HOME/.claude/powerkit"
+mkdir -p "$POWERKIT_DIR/sandbox-state"
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if [ -f "$SCRIPT_DIR/powerkit-sandbox.sh" ]; then
+    chmod +x "$SCRIPT_DIR/powerkit-sandbox.sh"
+    mkdir -p ~/.local/bin
+    ln -sf "$SCRIPT_DIR/powerkit-sandbox.sh" ~/.local/bin/powerkit-sandbox
+    success "PowerKit Sandbox installed to ~/.local/bin/powerkit-sandbox"
+else
+    warn "powerkit-sandbox.sh not found in $SCRIPT_DIR"
+fi
+
+# 9. Clone Computer Use Reference Implementation
+echo ""
+echo "9. Cloning Computer Use Reference..."
 COMPUTER_USE_DIR="$HOME/tools/anthropic-quickstarts"
 if [ -d "$COMPUTER_USE_DIR" ]; then
     success "Anthropic Quickstarts already cloned"
@@ -110,7 +140,7 @@ else
     success "Computer Use reference cloned to $COMPUTER_USE_DIR"
 fi
 
-# 8. Verify installations
+# 10. Verify installations
 echo ""
 echo "=========================================="
 echo "Verification"
@@ -122,6 +152,8 @@ command -v gemini &> /dev/null && success "gemini" || warn "gemini (run 'gemini'
 command -v continuous-claude &> /dev/null && success "continuous-claude" || warn "continuous-claude"
 command -v claude-code-sandbox &> /dev/null && success "claude-code-sandbox" || warn "claude-code-sandbox"
 command -v ralph &> /dev/null && success "ralph" || warn "ralph (may need PATH update)"
+command -v happy &> /dev/null && success "happy (Happy Coder)" || warn "happy (npm install -g happy-coder)"
+command -v powerkit-sandbox &> /dev/null && success "powerkit-sandbox" || warn "powerkit-sandbox (check ~/.local/bin in PATH)"
 
 echo ""
 echo "MCP Servers (verify with 'claude mcp list'):"
@@ -138,6 +170,17 @@ echo "1. Run 'gemini' and login with your Google account"
 echo "2. Verify MCPs: claude mcp list"
 echo "3. Test sandbox: claude-code-sandbox --help"
 echo "4. Read docs: cat docs/POWERKIT-ENHANCEMENTS.md"
+echo ""
+echo "For Mobile Access (Happy Coder):"
+echo "  - Download app: iOS App Store or Google Play (search 'Happy Codex')"
+echo "  - Run 'happy' instead of 'claude' to start encrypted mobile session"
+echo "  - Scan QR code with mobile app to connect"
+echo ""
+echo "For Sandboxed Execution:"
+echo "  - Run 'powerkit-sandbox' instead of 'claude'"
+echo "  - First run creates whitelist at ~/.claude/powerkit/sandbox-whitelist.json"
+echo "  - When Claude requests access, choose: [y] once, [n] deny, [a] always"
+echo "  - Pre-whitelist paths: powerkit-sandbox --add-path ~/Projects"
 echo ""
 echo "For iOS development:"
 echo "  - Ensure Xcode is installed"

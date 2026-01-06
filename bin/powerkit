@@ -1,0 +1,865 @@
+#!/bin/zsh
+# PowerKit - Unified CLI for Claude Code Powerkit
+# Version: 1.0.0
+
+set -e
+
+# Configuration
+POWERKIT_VERSION="1.0.0"
+POWERKIT_DIR="${POWERKIT_DIR:-$HOME/.claude}"
+
+# Determine installation directory (where this script lives)
+SCRIPT_PATH="${0:A}"
+INSTALL_DIR="$(dirname "$(dirname "$SCRIPT_PATH")")"
+SCRIPTS_DIR="$INSTALL_DIR/scripts"
+DOCS_DIR="$INSTALL_DIR/docs"
+CONFIG_DIR="$POWERKIT_DIR"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+# Helper functions
+info()    { echo "${BLUE}[INFO]${NC} $1"; }
+success() { echo "${GREEN}[OK]${NC} $1"; }
+warn()    { echo "${YELLOW}[WARN]${NC} $1"; }
+error()   { echo "${RED}[ERROR]${NC} $1" >&2; }
+die()     { error "$1"; exit 1; }
+
+show_version() {
+    echo "PowerKit v${POWERKIT_VERSION}"
+    echo "Claude Code Enhancement Suite"
+    echo ""
+    echo "Components:"
+    command -v claude &>/dev/null && echo "  Claude CLI: $(claude --version 2>/dev/null | head -1 || echo 'installed')" || echo "  Claude CLI: not installed"
+    command -v gemini &>/dev/null && echo "  Gemini CLI: installed" || echo "  Gemini CLI: not installed"
+    command -v ralph &>/dev/null && echo "  Ralph: installed" || echo "  Ralph: not installed"
+    command -v happy &>/dev/null && echo "  Happy Coder: installed" || echo "  Happy Coder: not installed"
+}
+
+show_help() {
+    cat << 'EOF'
+PowerKit - Claude Code Enhancement Suite
+
+USAGE:
+    powerkit <command> [options]
+
+COMMANDS:
+    start [path]        Start Claude Code session (default: current dir)
+    doctor              Check installation health and dependencies
+    status              Show current session status and context
+    init <path>         Initialize powerkit for a project
+
+MODEL SELECTION:
+    opus                Switch to Opus 4.5 (complex tasks, $15/1M)
+    sonnet              Switch to Sonnet 4.5 (default, $3/1M)
+    haiku               Switch to Haiku 4.5 (validation, $0.25/1M)
+
+EXECUTION MODES:
+    full                Start with base layer (sandbox + mobile access)
+    sandbox [args]      Run Claude in permission-controlled sandbox
+    parallel [--boris]  Create parallel worktrees (--boris for 5-terminal setup)
+    cleanup             Remove parallel worktrees interactively
+    autonomous <task>   Run Ralph autonomous loop
+    happy               Start Happy Coder (mobile-enabled session)
+
+MAINTENANCE:
+    update              Update all skills, agents, and plugins
+    install             Run full installation
+    install-mcps        Install/update MCP servers
+    uninstall           Remove powerkit (keeps Claude CLI)
+
+UTILITIES:
+    mcp                 List installed MCP servers
+    skills              Show available skills count
+    agents              Show available agents count
+    extract [opts]      Search/export session history
+
+OPTIONS:
+    -h, --help          Show this help message
+    -v, --version       Show version information
+    --verbose           Enable verbose output
+
+EXAMPLES:
+    powerkit start                    # Start Claude in current directory
+    powerkit doctor                   # Check installation health
+    powerkit init ~/projects/myapp    # Setup powerkit for project
+    powerkit full                     # Start with sandbox + mobile base
+    powerkit parallel --boris         # Create 5 terminals (Boris workflow)
+    powerkit opus                     # Use Opus for complex task
+    powerkit sandbox -- -p "task"     # Run sandboxed with prompt
+    powerkit autonomous "add tests"   # Run Ralph loop
+    powerkit cleanup                  # Remove worktrees interactively
+
+DOCUMENTATION:
+    Full docs: ~/.claude/powerkit/docs/
+    Cheatsheet: powerkit help cheatsheet
+
+EOF
+}
+
+show_cheatsheet() {
+    local cheatsheet="$DOCS_DIR/COMPLETE-CHEATSHEET.md"
+    if [ -f "$cheatsheet" ]; then
+        cat "$cheatsheet"
+    else
+        die "Cheatsheet not found at $cheatsheet"
+    fi
+}
+
+# Health check / doctor command
+cmd_doctor() {
+    echo ""
+    echo "${BOLD}${BLUE}=== PowerKit Health Check ===${NC}"
+    echo ""
+
+    local issues=0
+
+    # Core dependencies
+    echo "${BOLD}Core Dependencies:${NC}"
+
+    if command -v claude &>/dev/null; then
+        success "Claude CLI installed"
+    else
+        error "Claude CLI not found - install from https://claude.ai/code"
+        ((issues++))
+    fi
+
+    if command -v node &>/dev/null; then
+        local node_ver=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+        if [ "$node_ver" -ge 20 ]; then
+            success "Node.js $(node -v)"
+        else
+            warn "Node.js $(node -v) - recommend v20+"
+        fi
+    else
+        error "Node.js not found"
+        ((issues++))
+    fi
+
+    if command -v npm &>/dev/null; then
+        success "npm $(npm -v)"
+    else
+        error "npm not found"
+        ((issues++))
+    fi
+
+    if command -v git &>/dev/null; then
+        success "git $(git --version | cut -d' ' -f3)"
+    else
+        error "git not found"
+        ((issues++))
+    fi
+
+    if command -v jq &>/dev/null; then
+        success "jq installed"
+    else
+        warn "jq not found - required for sandbox features"
+        echo "      Install: brew install jq"
+    fi
+
+    # Optional tools
+    echo ""
+    echo "${BOLD}Optional Tools:${NC}"
+
+    command -v docker &>/dev/null && success "Docker installed" || warn "Docker not installed (needed for sandbox)"
+    command -v gemini &>/dev/null && success "Gemini CLI installed" || warn "Gemini CLI not installed"
+    command -v ralph &>/dev/null && success "Ralph installed" || warn "Ralph not installed"
+    command -v happy &>/dev/null && success "Happy Coder installed" || warn "Happy Coder not installed"
+    command -v continuous-claude &>/dev/null && success "Continuous Claude installed" || warn "Continuous Claude not installed"
+
+    # PowerKit directories
+    echo ""
+    echo "${BOLD}PowerKit Installation:${NC}"
+
+    [ -d "$POWERKIT_DIR" ] && success "Config dir: $POWERKIT_DIR" || error "Config dir missing"
+    [ -f "$POWERKIT_DIR/CLAUDE.md" ] && success "Global CLAUDE.md exists" || warn "Global CLAUDE.md missing"
+    [ -d "$POWERKIT_DIR/skills" ] && success "Skills dir exists ($(ls -1 "$POWERKIT_DIR/skills" 2>/dev/null | wc -l | tr -d ' ') skills)" || warn "Skills dir missing"
+    [ -d "$POWERKIT_DIR/agents" ] && success "Agents dir exists" || warn "Agents dir missing"
+    [ -d "$POWERKIT_DIR/rules" ] && success "Rules dir exists" || warn "Rules dir missing"
+
+    # MCP servers
+    echo ""
+    echo "${BOLD}MCP Servers:${NC}"
+
+    if command -v claude &>/dev/null; then
+        local mcp_list=$(claude mcp list 2>/dev/null || echo "")
+        if [ -n "$mcp_list" ]; then
+            echo "$mcp_list" | while read -r line; do
+                if [[ "$line" == *"Connected"* ]] || [[ "$line" == *"✓"* ]]; then
+                    success "$line"
+                elif [[ "$line" == *"Failed"* ]] || [[ "$line" == *"✗"* ]]; then
+                    warn "$line"
+                else
+                    echo "  $line"
+                fi
+            done
+        else
+            warn "No MCP servers configured or claude mcp list failed"
+        fi
+    else
+        warn "Cannot check MCP servers - Claude CLI not installed"
+    fi
+
+    # Summary
+    echo ""
+    echo "${BOLD}${BLUE}=== Summary ===${NC}"
+    if [ $issues -eq 0 ]; then
+        success "All core dependencies satisfied"
+        echo ""
+        echo "Run 'powerkit start' to begin a Claude session"
+    else
+        error "$issues critical issue(s) found"
+        echo ""
+        echo "Fix the issues above, then run 'powerkit doctor' again"
+    fi
+    echo ""
+}
+
+# Start Claude session
+cmd_start() {
+    local target_dir="${1:-.}"
+
+    if [ ! -d "$target_dir" ]; then
+        die "Directory not found: $target_dir"
+    fi
+
+    cd "$target_dir"
+    info "Starting Claude Code in $(pwd)"
+
+    # Check for project CLAUDE.md
+    if [ -f "CLAUDE.md" ]; then
+        success "Found project CLAUDE.md"
+    else
+        warn "No project CLAUDE.md - using global config only"
+        echo "      Run 'powerkit init .' to create one"
+    fi
+
+    exec claude
+}
+
+# Initialize project
+cmd_init() {
+    local target_dir="${1:-.}"
+
+    if [ ! -d "$target_dir" ]; then
+        mkdir -p "$target_dir"
+    fi
+
+    local claude_md="$target_dir/CLAUDE.md"
+
+    if [ -f "$claude_md" ]; then
+        warn "CLAUDE.md already exists at $claude_md"
+        read -r "response?Overwrite? [y/N]: "
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            info "Keeping existing CLAUDE.md"
+            return 0
+        fi
+        cp "$claude_md" "${claude_md}.backup.$(date +%Y%m%d%H%M%S)"
+        info "Backed up existing file"
+    fi
+
+    # Detect project type
+    local project_type="generic"
+    local test_cmd="npm test"
+    local lint_cmd="npm run lint"
+    local suggested_plugins=""
+
+    if [ -f "$target_dir/package.json" ]; then
+        if grep -q "react" "$target_dir/package.json" 2>/dev/null; then
+            project_type="react"
+            suggested_plugins="frontend-mobile-development, tdd-workflows"
+        elif grep -q "next" "$target_dir/package.json" 2>/dev/null; then
+            project_type="nextjs"
+            suggested_plugins="frontend-mobile-development, api-scaffolding"
+        else
+            project_type="nodejs"
+            suggested_plugins="tdd-workflows, code-review-ai"
+        fi
+    elif [ -f "$target_dir/requirements.txt" ] || [ -f "$target_dir/pyproject.toml" ]; then
+        project_type="python"
+        test_cmd="pytest"
+        lint_cmd="ruff check ."
+        suggested_plugins="python-development, tdd-workflows"
+    elif [ -f "$target_dir/go.mod" ]; then
+        project_type="golang"
+        test_cmd="go test ./..."
+        lint_cmd="golangci-lint run"
+        suggested_plugins="systems-programming, tdd-workflows"
+    elif [ -f "$target_dir/Cargo.toml" ]; then
+        project_type="rust"
+        test_cmd="cargo test"
+        lint_cmd="cargo clippy"
+        suggested_plugins="systems-programming, tdd-workflows"
+    fi
+
+    # Generate CLAUDE.md
+    cat > "$claude_md" << EOF
+---
+imports:
+  - ~/.claude/CLAUDE.md
+  - ~/.claude/rules/development.md
+---
+
+# $(basename "$target_dir") Project Configuration
+
+## Project Type
+- **Type**: $project_type
+- **Suggested Plugins**: $suggested_plugins
+
+## Commands
+
+### Testing
+\`\`\`bash
+$test_cmd
+\`\`\`
+
+### Linting
+\`\`\`bash
+$lint_cmd
+\`\`\`
+
+### Build
+\`\`\`bash
+# Add project-specific build command
+\`\`\`
+
+## Project-Specific Rules
+
+### Code Standards
+- Follow existing code patterns in this project
+- Use project's existing naming conventions
+- Maintain consistency with existing architecture
+
+### Pre-Commit Checklist
+- [ ] Tests pass: \`$test_cmd\`
+- [ ] Linting passes: \`$lint_cmd\`
+- [ ] No new TODO comments without issue links
+- [ ] Documentation updated if public API changed
+
+### Sensitive Files (DO NOT MODIFY)
+- .env, .env.* - Environment variables
+- **/secrets/** - Secret files
+- **/*.key - Private keys
+
+### Architecture Notes
+<!-- Add project architecture notes here -->
+
+## Memory Context
+
+When starting work on this project:
+\`\`\`
+context_search query: "$(basename "$target_dir")"
+context_get category: "progress"
+\`\`\`
+
+Before ending session:
+\`\`\`
+context_save key: "$(basename "$target_dir")-progress" category: "progress"
+context_checkpoint name: "$(basename "$target_dir")-checkpoint"
+\`\`\`
+EOF
+
+    success "Created $claude_md"
+    info "Detected project type: $project_type"
+
+    # Create .claude directory for auto-learned skills
+    mkdir -p "$target_dir/.claude/skills"
+
+    success "Initialized powerkit for $(basename "$target_dir")"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Review and customize $claude_md"
+    echo "  2. Run 'powerkit start $target_dir' to begin"
+}
+
+# Model switching
+cmd_model() {
+    local model="$1"
+
+    case "$model" in
+        opus)
+            info "Switching to Claude Opus 4.5 (complex tasks)"
+            exec claude --model claude-opus-4-5-20251101
+            ;;
+        sonnet)
+            info "Switching to Claude Sonnet 4.5 (default)"
+            exec claude --model claude-sonnet-4-5-20251101
+            ;;
+        haiku)
+            info "Switching to Claude Haiku 4.5 (fast/cheap)"
+            exec claude --model claude-haiku-4-5-20251101
+            ;;
+        *)
+            die "Unknown model: $model. Use: opus, sonnet, haiku"
+            ;;
+    esac
+}
+
+# Sandbox mode
+cmd_sandbox() {
+    local sandbox_script="$SCRIPTS_DIR/powerkit-sandbox.sh"
+
+    if [ -f "$sandbox_script" ]; then
+        exec "$sandbox_script" "$@"
+    else
+        die "Sandbox script not found at $sandbox_script"
+    fi
+}
+
+# Full mode - Base layer with mobile access (Happy Coder preferred)
+cmd_full() {
+    info "Starting full powerkit session with mobile access"
+
+    # Check available tools
+    local has_happy=false
+    local has_sandbox=false
+
+    command -v happy &>/dev/null && has_happy=true
+    [ -f "$SCRIPTS_DIR/powerkit-sandbox.sh" ] && has_sandbox=true
+
+    # Note: Happy wraps Claude directly, sandbox is Docker-based
+    # They can't be nested - use Happy for mobile or sandbox for Docker isolation
+    if $has_happy; then
+        info "Mobile access enabled via Happy Coder"
+        echo "Scan QR code with Happy mobile app to connect"
+        if $has_sandbox; then
+            echo ""
+            echo "${YELLOW}Note:${NC} For Docker isolation, use 'powerkit sandbox' instead"
+        fi
+        echo ""
+        exec happy "$@"
+    elif $has_sandbox; then
+        warn "Happy Coder not installed. Using sandbox mode (Docker isolation)."
+        exec "$SCRIPTS_DIR/powerkit-sandbox.sh" "$@"
+    else
+        warn "No enhanced mode available. Starting regular Claude session."
+        exec claude "$@"
+    fi
+}
+
+# Parallel execution - Boris's 5-Terminal Technique
+cmd_parallel() {
+    local target_dir="${1:-.}"
+    local boris_mode=false
+
+    # Check for --boris flag
+    if [[ "$1" == "--boris" ]]; then
+        boris_mode=true
+        target_dir="${2:-.}"
+    fi
+
+    if [ ! -d "$target_dir" ]; then
+        die "Directory not found: $target_dir"
+    fi
+
+    cd "$target_dir"
+
+    if [ ! -d ".git" ]; then
+        die "Not a git repository. Parallel mode requires git."
+    fi
+
+    local base_dir="$(dirname "$(pwd)")"
+    local project_name="$(basename "$(pwd)")"
+    local date_suffix="$(date +%Y%m%d)"
+
+    if $boris_mode; then
+        # Boris's 5-Terminal Setup with proper roles
+        info "Setting up Boris's 5-terminal workflow..."
+        echo ""
+
+        # Helper to create worktree with proper error handling
+        create_worktree() {
+            local branch="$1"
+            local dir="$2"
+            local label="$3"
+
+            if [ -d "$dir" ]; then
+                warn "$label exists: $dir"
+                return 0
+            fi
+
+            # Try with -B to force-create branch (handles stale branches)
+            local output
+            if output=$(git worktree add -B "$branch" "$dir" HEAD 2>&1); then
+                success "$label: $dir"
+            else
+                # Show actual error for debugging
+                warn "$label failed: $output"
+            fi
+        }
+
+        # T1: Orchestrator (stays on main, uses Plan Mode)
+        create_worktree "orchestrator/${date_suffix}" "${base_dir}/${project_name}-orchestrator" "T1 Orchestrator"
+
+        # T2: Reviewer
+        create_worktree "review/${date_suffix}" "${base_dir}/${project_name}-review" "T2 Reviewer"
+
+        # T3: Feature A
+        create_worktree "feature/a-${date_suffix}" "${base_dir}/${project_name}-feature-a" "T3 Feature A"
+
+        # T4: Feature B
+        create_worktree "feature/b-${date_suffix}" "${base_dir}/${project_name}-feature-b" "T4 Feature B"
+
+        # T5: Fixes
+        create_worktree "fix/${date_suffix}" "${base_dir}/${project_name}-fixes" "T5 Fixes"
+
+        echo ""
+        echo "${BOLD}Boris's 5-Terminal Workflow Ready:${NC}"
+        echo ""
+        echo "  ${CYAN}T1 Orchestrator${NC}: $t1_dir"
+        echo "     └─ Plan Mode (Shift+Tab twice), coordinate work"
+        echo ""
+        echo "  ${CYAN}T2 Reviewer${NC}:     $t2_dir"
+        echo "     └─ Code reviews, PR reviews, quality gates"
+        echo ""
+        echo "  ${CYAN}T3 Feature A${NC}:    $t3_dir"
+        echo "     └─ Primary feature (auto-accept after T1 approval)"
+        echo ""
+        echo "  ${CYAN}T4 Feature B${NC}:    $t4_dir"
+        echo "     └─ Parallel feature (no conflicts with T3)"
+        echo ""
+        echo "  ${CYAN}T5 Fixes${NC}:        $t5_dir"
+        echo "     └─ Bug fixes, polish, small tasks"
+        echo ""
+        echo "${YELLOW}Workflow:${NC}"
+        echo "  1. T1: Create plan (Shift+Tab twice for Plan Mode)"
+        echo "  2. T3/T4: Execute plan (auto-accept mode)"
+        echo "  3. T2: Review PRs from T3/T4/T5"
+        echo "  4. T5: Quick fixes, overnight Ralph tasks"
+        echo ""
+    else
+        # Simple 4-terminal setup
+        info "Setting up 4 parallel worktrees..."
+
+        local branches=("feature" "tests" "docs" "fixes")
+        for branch in "${branches[@]}"; do
+            local worktree_dir="${base_dir}/${project_name}-${branch}"
+            local branch_name="${branch}/parallel-${date_suffix}"
+
+            if [ -d "$worktree_dir" ]; then
+                warn "Worktree exists: $worktree_dir"
+            else
+                local output
+                if output=$(git worktree add -B "$branch_name" "$worktree_dir" HEAD 2>&1); then
+                    success "Created: $worktree_dir"
+                else
+                    warn "Failed: $output"
+                fi
+            fi
+        done
+
+        echo ""
+        echo "${BOLD}Parallel worktrees created:${NC}"
+        echo "  T1 (feature): ${base_dir}/${project_name}-feature"
+        echo "  T2 (tests):   ${base_dir}/${project_name}-tests"
+        echo "  T3 (docs):    ${base_dir}/${project_name}-docs"
+        echo "  T4 (fixes):   ${base_dir}/${project_name}-fixes"
+        echo ""
+    fi
+
+    echo "Open each in a terminal and run 'powerkit start .'"
+    echo ""
+    echo "To cleanup: git worktree remove <path> && git worktree prune"
+}
+
+# Cleanup worktrees
+cmd_cleanup() {
+    local target_dir="${1:-.}"
+
+    cd "$target_dir"
+
+    if [ ! -d ".git" ]; then
+        die "Not a git repository"
+    fi
+
+    local base_dir="$(dirname "$(pwd)")"
+    local project_name="$(basename "$(pwd)")"
+
+    info "Cleaning up worktrees for $project_name..."
+
+    # List all worktrees
+    local worktrees=$(git worktree list --porcelain | grep "worktree" | awk '{print $2}')
+
+    # Find project-related worktrees
+    local removed=0
+    for wt in $worktrees; do
+        if [[ "$wt" == *"${project_name}-"* ]]; then
+            local wt_name=$(basename "$wt")
+            echo -n "  Remove $wt_name? [y/N]: "
+            read -r response
+            if [[ "$response" =~ ^[Yy]$ ]]; then
+                local output
+                if output=$(git worktree remove "$wt" --force 2>&1); then
+                    success "Removed $wt_name"
+                    ((removed++))
+                else
+                    warn "Failed to remove $wt_name: $output"
+                fi
+            fi
+        fi
+    done
+
+    # Prune stale worktree references
+    git worktree prune
+
+    if [ $removed -gt 0 ]; then
+        success "Removed $removed worktree(s)"
+    else
+        info "No worktrees removed"
+    fi
+
+    # List remaining worktrees
+    echo ""
+    echo "${BOLD}Remaining worktrees:${NC}"
+    git worktree list
+}
+
+# Autonomous mode (Ralph)
+cmd_autonomous() {
+    local task="$*"
+
+    if ! command -v ralph &>/dev/null; then
+        die "Ralph not installed. Run: git clone https://github.com/frankbria/ralph-claude-code && cd ralph-claude-code && ./install.sh"
+    fi
+
+    if [ -z "$task" ]; then
+        # Check for PROMPT.md
+        if [ -f "PROMPT.md" ]; then
+            info "Using existing PROMPT.md"
+            exec ralph --monitor
+        else
+            die "No task specified and no PROMPT.md found. Usage: powerkit autonomous 'your task'"
+        fi
+    fi
+
+    # Create PROMPT.md with task
+    echo "$task" > PROMPT.md
+    info "Created PROMPT.md with task"
+    exec ralph --monitor
+}
+
+# Happy Coder mode
+cmd_happy() {
+    if ! command -v happy &>/dev/null; then
+        die "Happy Coder not installed. Run: npm install -g happy-coder"
+    fi
+
+    info "Starting Happy Coder (mobile-enabled session)"
+    echo "Scan the QR code with the Happy mobile app to connect"
+    echo ""
+    exec happy "$@"
+}
+
+# Update command
+cmd_update() {
+    # Try installation directory first, then fall back to CLAUDE_DIR
+    local update_script="$SCRIPTS_DIR/update-skills.sh"
+    if [ ! -f "$update_script" ]; then
+        update_script="$POWERKIT_DIR/update-skills.sh"
+    fi
+
+    if [ -f "$update_script" ]; then
+        exec "$update_script"
+    else
+        die "Update script not found. Try: powerkit install"
+    fi
+}
+
+# Install MCPs
+cmd_install_mcps() {
+    info "Installing/updating MCP servers..."
+
+    if ! command -v claude &>/dev/null; then
+        die "Claude CLI not installed"
+    fi
+
+    # Core MCPs
+    local mcps=(
+        "memory-keeper:npx -y memory-keeper-mcp"
+        "context7:npx -y @anthropic/context7-mcp"
+        "gemini-cli:npx -y gemini-mcp-tool"
+        "playwright:npx -y @anthropic/mcp-playwright"
+        "mobile-mcp:npx -y @mobilenext/mobile-mcp@latest"
+    )
+
+    # macOS only
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        mcps+=("ios-simulator:npx -y ios-simulator-mcp")
+    fi
+
+    for mcp_entry in "${mcps[@]}"; do
+        local name="${mcp_entry%%:*}"
+        local cmd="${mcp_entry#*:}"
+
+        echo -n "  Installing $name... "
+        if claude mcp add "$name" -- $cmd 2>/dev/null; then
+            echo "${GREEN}OK${NC}"
+        else
+            echo "${YELLOW}already installed or failed${NC}"
+        fi
+    done
+
+    success "MCP installation complete"
+    echo ""
+    echo "Verify with: claude mcp list"
+}
+
+# Show MCP list
+cmd_mcp() {
+    if command -v claude &>/dev/null; then
+        claude mcp list
+    else
+        die "Claude CLI not installed"
+    fi
+}
+
+# Show skills count
+cmd_skills() {
+    local count=$(ls -1 "$POWERKIT_DIR/skills" 2>/dev/null | wc -l | tr -d ' ')
+    echo "Skills installed: $count"
+    echo "Location: $POWERKIT_DIR/skills/"
+}
+
+# Show agents count
+cmd_agents() {
+    local count=$(find "$POWERKIT_DIR/agents" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+    echo "Agents installed: $count"
+    echo "Location: $POWERKIT_DIR/agents/"
+}
+
+# Status command
+cmd_status() {
+    echo ""
+    echo "${BOLD}${BLUE}=== PowerKit Status ===${NC}"
+    echo ""
+
+    echo "${BOLD}Installation:${NC}"
+    echo "  Version: $POWERKIT_VERSION"
+    echo "  Config: $POWERKIT_DIR"
+    echo "  Skills: $(ls -1 "$POWERKIT_DIR/skills" 2>/dev/null | wc -l | tr -d ' ')"
+    echo "  Agents: $(find "$POWERKIT_DIR/agents" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')"
+
+    echo ""
+    echo "${BOLD}Current Directory:${NC}"
+    echo "  Path: $(pwd)"
+    [ -f "CLAUDE.md" ] && echo "  Project config: Yes" || echo "  Project config: No"
+    [ -d ".claude" ] && echo "  .claude dir: Yes" || echo "  .claude dir: No"
+    [ -d ".git" ] && echo "  Git repo: Yes ($(git branch --show-current 2>/dev/null || echo 'unknown'))" || echo "  Git repo: No"
+
+    echo ""
+}
+
+# Main command router
+main() {
+    local cmd="${1:-help}"
+    shift 2>/dev/null || true
+
+    case "$cmd" in
+        # Help & info
+        -h|--help|help)
+            if [ "$1" = "cheatsheet" ]; then
+                show_cheatsheet
+            else
+                show_help
+            fi
+            ;;
+        -v|--version|version)
+            show_version
+            ;;
+
+        # Core commands
+        start)
+            cmd_start "$@"
+            ;;
+        doctor|health|check)
+            cmd_doctor
+            ;;
+        status)
+            cmd_status
+            ;;
+        init|setup)
+            cmd_init "$@"
+            ;;
+
+        # Model selection
+        opus|sonnet|haiku)
+            cmd_model "$cmd"
+            ;;
+
+        # Execution modes
+        full)
+            cmd_full "$@"
+            ;;
+        sandbox)
+            cmd_sandbox "$@"
+            ;;
+        parallel)
+            cmd_parallel "$@"
+            ;;
+        cleanup)
+            cmd_cleanup "$@"
+            ;;
+        autonomous|ralph|loop)
+            cmd_autonomous "$@"
+            ;;
+        happy|mobile)
+            cmd_happy "$@"
+            ;;
+
+        # Maintenance
+        update)
+            cmd_update
+            ;;
+        install)
+            if [ -f "$SCRIPTS_DIR/setup.sh" ]; then
+                exec "$SCRIPTS_DIR/setup.sh"
+            else
+                die "Setup script not found"
+            fi
+            ;;
+        install-mcps)
+            cmd_install_mcps
+            ;;
+        uninstall)
+            if [ -f "$SCRIPTS_DIR/uninstall.sh" ]; then
+                exec "$SCRIPTS_DIR/uninstall.sh"
+            else
+                die "Uninstall script not found"
+            fi
+            ;;
+
+        # Utilities
+        mcp)
+            cmd_mcp
+            ;;
+        skills)
+            cmd_skills
+            ;;
+        agents)
+            cmd_agents
+            ;;
+        extract)
+            if command -v claude-extract &>/dev/null; then
+                exec claude-extract "$@"
+            else
+                die "claude-extract not installed"
+            fi
+            ;;
+
+        # Unknown
+        *)
+            error "Unknown command: $cmd"
+            echo "Run 'powerkit --help' for usage"
+            exit 1
+            ;;
+    esac
+}
+
+# Entry point
+main "$@"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # Claude Code Powerkit Setup Script
 # Sets up the complete Claude Code enhancement suite
 
@@ -11,6 +11,15 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
+
+# Verify dependencies
+check_deps() {
+    local missing=0
+    command -v node &>/dev/null || { echo "Error: Node.js required"; missing=1; }
+    command -v git &>/dev/null || { echo "Error: git required"; missing=1; }
+    [ $missing -eq 1 ] && exit 1
+}
+check_deps
 
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════════╗"
@@ -80,7 +89,12 @@ cat > "$CLAUDE_DIR/plugins/known_marketplaces.json" << 'EOF'
 }
 EOF
 # Fix path
-sed -i '' "s|\$USER|$USER|g" "$CLAUDE_DIR/plugins/known_marketplaces.json"
+# Cross-platform sed (macOS uses -i '', Linux uses -i)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s|\$USER|$USER|g" "$CLAUDE_DIR/plugins/known_marketplaces.json"
+else
+    sed -i "s|\$USER|$USER|g" "$CLAUDE_DIR/plugins/known_marketplaces.json"
+fi
 echo -e "  ${GREEN}✓${NC} Updated marketplace configuration"
 
 # Create symlinks for easy access

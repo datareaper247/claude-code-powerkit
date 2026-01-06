@@ -11,8 +11,9 @@ Complete guide to advanced features including Gemini CLI integration, autonomous
 3. [Computer Use](#3-computer-use)
 4. [Mobile Development (React Native + iOS + Android)](#4-mobile-development)
 5. [Containerization & Sandboxing](#5-containerization--sandboxing)
-6. [New MCP Servers to Install](#6-new-mcp-servers-to-install)
-7. [Best Repos & Resources](#7-best-repos--resources)
+6. [Remote Access & Mobile Notifications](#6-remote-access--mobile-notifications)
+7. [New MCP Servers to Install](#7-new-mcp-servers-to-install)
+8. [Best Repos & Resources](#8-best-repos--resources)
 
 ---
 
@@ -483,7 +484,248 @@ For VSCode/Cursor integration:
 
 ---
 
-## 6. New MCP Servers to Install
+### Option D: PowerKit Sandbox (Permission Whitelist)
+
+Custom sandbox wrapper with **permission learning** - starts locked down, learns what you allow.
+
+**Installation**:
+```bash
+# Already included in powerkit
+chmod +x scripts/powerkit-sandbox.sh
+ln -sf "$(pwd)/scripts/powerkit-sandbox.sh" ~/.local/bin/powerkit-sandbox
+```
+
+**How It Works**:
+1. Starts Claude in Docker with minimal permissions (current dir only)
+2. When Claude needs access outside sandbox, prompts you
+3. Choose: `[y]` allow once, `[n]` deny, `[a]` always allow (whitelist)
+4. Whitelisted permissions persist across sessions
+
+**Usage**:
+```bash
+# Start sandboxed Claude
+powerkit-sandbox
+
+# With Claude arguments
+powerkit-sandbox -- -p "fix all linting errors"
+
+# List current whitelist
+powerkit-sandbox --list
+
+# Pre-whitelist common paths
+powerkit-sandbox --add-path ~/Projects
+powerkit-sandbox --add-write ~/Projects/my-app
+
+# Interactive shell for debugging
+powerkit-sandbox --shell
+
+# Show status
+powerkit-sandbox --status
+```
+
+**Whitelist File** (`~/.claude/powerkit/sandbox-whitelist.json`):
+```json
+{
+  "paths": {
+    "read": ["~/Projects", "~/.config"],
+    "write": ["~/Projects/current-app"]
+  },
+  "commands": ["git", "npm", "docker"],
+  "mcp_servers": ["mobile-mcp", "ios-simulator"],
+  "network": {
+    "allowed_hosts": ["github.com", "npmjs.org"],
+    "allowed_ports": [443, 80]
+  }
+}
+```
+
+**Permission Prompt**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│ PERMISSION REQUEST                                          │
+└─────────────────────────────────────────────────────────────┘
+
+  Action:   read
+  Resource: ~/.ssh/config
+
+  [y] Allow once
+  [n] Deny
+  [a] Always allow (add to whitelist)
+
+  Choice [y/n/a]:
+```
+
+**Benefits**:
+- Learns your workflow over time
+- Safer than `--dangerously-skip-permissions`
+- Audit trail in `~/.claude/powerkit/sandbox-state/sandbox.log`
+- Works with claude-code-sandbox if installed
+
+---
+
+## 6. Remote Access & Mobile Notifications
+
+Control Claude Code from your phone, receive push notifications, and continue sessions across devices.
+
+### Option A: Happy Coder (Recommended)
+
+Free, open-source mobile client with push notifications, voice control, and E2E encryption.
+
+**Installation**:
+```bash
+npm install -g happy-coder
+```
+
+**Requirements**:
+- Node.js >= 20.0.0
+- Claude Code CLI installed and authenticated
+
+**Usage**:
+```bash
+# Start Happy-enabled Claude session
+happy
+
+# Scan the QR code with the mobile app to connect
+# Continue your session from iOS/Android/Web
+```
+
+**First-Time Setup**:
+1. Install CLI: `npm install -g happy-coder`
+2. Download mobile app:
+   - [iOS App Store](https://apps.apple.com/us/app/happy-codex-claude-code-app/id6748571505)
+   - [Google Play Store](https://play.google.com/store/apps/details?id=com.ex3ndr.happy)
+3. Run `happy` in terminal
+4. Scan QR code with mobile app
+5. Sessions now sync between desktop and mobile
+
+**Key Features**:
+| Feature | Description |
+|---------|-------------|
+| **Push Notifications** | Alerts when Claude needs input, completes tasks, or errors |
+| **Voice Control** | Speak commands via Eleven Labs integration |
+| **E2E Encryption** | QR code pairing, zero-knowledge architecture |
+| **Multi-Session** | Manage multiple Claude Code sessions |
+| **Offline-First** | Sessions persist even when disconnected |
+| **Permission Prompts** | Approve MCP tools and file ops from mobile |
+
+**Available Commands**:
+```bash
+happy              # Start encrypted Claude session
+happy auth         # Manage authentication
+happy notify       # Push notification to devices
+happy daemon       # Background service management
+happy doctor       # System diagnostics
+happy codex        # Codex mode activation
+happy connect      # Store API keys in Happy cloud
+```
+
+**Configuration (Environment Variables)**:
+```bash
+# Optional customization
+HAPPY_DISABLE_SLEEP=true          # Prevent macOS sleep
+HAPPY_SERVER_URL=<custom-url>     # Custom relay server
+HAPPY_WEBAPP_URL=<custom-url>     # Custom web app URL
+```
+
+**Repositories**:
+- [Main App (Mobile + Web)](https://github.com/slopus/happy)
+- [CLI Tool](https://github.com/slopus/happy-cli)
+- [Backend Server](https://github.com/slopus/happy-server)
+
+**Documentation**: [happy.engineering/docs](https://happy.engineering/docs/features/)
+
+---
+
+### Option B: Claude-Code-Remote (Text Notifications)
+
+Control Claude via email, Telegram, or LINE. Good for headless/server deployments.
+
+**Installation**:
+```bash
+git clone https://github.com/JessyTsui/Claude-Code-Remote
+cd Claude-Code-Remote
+npm install
+npm run setup  # Interactive configuration
+```
+
+**Configuration**:
+The setup wizard configures:
+- Email (SMTP/IMAP) for reply-to-control
+- Telegram bot (personal or group chat)
+- LINE bot integration
+- Desktop notifications (sound + system alerts)
+
+**Usage**:
+```bash
+# Start webhook listener
+npm run webhooks
+
+# Claude hooks are auto-configured in ~/.claude/settings.json
+# Now Claude will notify you on completion/errors
+```
+
+**Notification Channels**:
+| Channel | Features |
+|---------|----------|
+| **Email** | Reply with commands, full output in body |
+| **Telegram** | Interactive buttons, group support |
+| **LINE** | Token-based commands, group chats |
+| **Desktop** | Sound alerts + system notifications |
+
+**Key Features**:
+- Two-way communication (send commands via replies)
+- Full terminal output in notifications
+- tmux integration for command injection
+- Team collaboration via group chats
+
+**Repository**: [JessyTsui/Claude-Code-Remote](https://github.com/JessyTsui/Claude-Code-Remote)
+
+---
+
+### Comparison: Happy Coder vs Claude-Code-Remote
+
+| Feature | Happy Coder | Claude-Code-Remote |
+|---------|-------------|-------------------|
+| **Price** | Free | Free |
+| **Mobile App** | ✅ iOS + Android | ❌ No app |
+| **Push Notifications** | ✅ Native push | Desktop only |
+| **Voice Control** | ✅ Yes | ❌ No |
+| **E2E Encryption** | ✅ Yes | ❌ No |
+| **Email Control** | ❌ No | ✅ Yes |
+| **Telegram/LINE** | ❌ No | ✅ Yes |
+| **Team/Group Support** | ❌ No | ✅ Yes |
+| **Install Complexity** | Simple (npm) | Medium (config) |
+
+**Recommendation**:
+- **Happy Coder**: Best for solo developers who want mobile access + push notifications
+- **Claude-Code-Remote**: Best for teams, server deployments, or existing Telegram/email workflows
+
+---
+
+### Adding to Global CLAUDE.md
+
+Add this rule to `~/.claude/CLAUDE.md` for automatic remote session awareness:
+
+```markdown
+## Remote Access Integration
+
+### Happy Coder (Mobile Sessions)
+When running via `happy` instead of `claude`:
+- Session is E2E encrypted and synced to mobile
+- User may respond from phone - expect delays
+- Push notifications sent on completion/errors
+- Voice commands may be less precise than typed
+
+### Notification Best Practices
+- Use clear, actionable messages when blocked
+- Include specific options when asking for input
+- Summarize progress before long operations
+- Always confirm before destructive actions
+```
+
+---
+
+## 7. New MCP Servers to Install
 
 ### Essential MCPs for Mobile Development
 
@@ -530,7 +772,15 @@ claude mcp list
 
 ---
 
-## 7. Best Repos & Resources
+## 8. Best Repos & Resources
+
+### Remote Access & Notifications
+| Repository | Description |
+|------------|-------------|
+| [slopus/happy](https://github.com/slopus/happy) | Mobile + Web client with E2E encryption |
+| [slopus/happy-cli](https://github.com/slopus/happy-cli) | CLI tool for Happy Coder |
+| [JessyTsui/Claude-Code-Remote](https://github.com/JessyTsui/Claude-Code-Remote) | Email/Telegram/LINE notifications |
+| [omnara-ai/omnara](https://github.com/omnara-ai/omnara) | Legacy (deprecated) - new platform at omnara.com |
 
 ### Computer Use
 | Repository | Description |
@@ -594,11 +844,17 @@ claude mcp add ios-simulator -- npx -y ios-simulator-mcp
 git clone https://github.com/rvaidya/claude-code-sandbox ~/tools/claude-code-sandbox
 sudo ln -sf ~/tools/claude-code-sandbox/claude-code-sandbox /usr/local/bin/
 
-# 5. Verify installations
+# 5. Install Happy Coder (Mobile Access)
+npm install -g happy-coder
+# Download mobile app from App Store or Google Play
+# Run 'happy' and scan QR code
+
+# 6. Verify installations
 gemini --version
 continuous-claude --help
 claude mcp list
 claude-code-sandbox --help
+happy --help
 ```
 
 ---
@@ -613,3 +869,6 @@ claude-code-sandbox --help
 - [Continuous Claude](https://github.com/AnandChowdhary/continuous-claude)
 - [Claude Code Sandbox](https://github.com/rvaidya/claude-code-sandbox)
 - [Claude vs Gemini Comparison](https://www.index.dev/blog/gemini-vs-claude-for-coding)
+- [Happy Coder](https://happy.engineering/) - Mobile client for Claude Code
+- [Happy Coder CLI](https://github.com/slopus/happy-cli)
+- [Claude-Code-Remote](https://github.com/JessyTsui/Claude-Code-Remote) - Email/Telegram notifications

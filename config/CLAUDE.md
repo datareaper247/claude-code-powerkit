@@ -43,11 +43,155 @@ context_prepare_compaction to auto-save critical context
 context_checkpoint for named restore point
 ```
 
+### Gemini CLI - AI Collaboration (CRITICAL)
+
+**MCP Server**: `gemini-cli` (uses Google login, no API keys)
+
+**AUTOMATIC DELEGATION**: Claude MUST proactively use Gemini for these scenarios:
+
+| Trigger | Action |
+|---------|--------|
+| File > 1000 lines or 50K tokens | `ask gemini to analyze @file` |
+| Analyzing unfamiliar codebase | `use gemini to summarize @./src` |
+| Need second opinion on approach | `ask gemini: is this the best way to...` |
+| Real-time/latest information | `search for [topic] using gemini` |
+| Testing risky code | `use gemini sandbox to test: [code]` |
+| Claude expresses uncertainty | Get Gemini's perspective |
+| Architecture decisions | Cross-validate with Gemini |
+
+**Available Tools**:
+- `mcp__gemini-cli__ask-gemini` - Query Gemini for analysis, questions, file processing
+- `mcp__gemini-cli__brainstorm` - Generate ideas with creative frameworks
+
+**Decision Matrix**:
+| Task | Use Claude | Use Gemini |
+|------|------------|------------|
+| Writing code | ✓ | |
+| Code review (small) | ✓ | Optional |
+| Code review (large) | | ✓ |
+| Video/image verification | NEVER | ALWAYS |
+| Autonomous loops | ✓ | |
+| Quick lookup | | ✓ |
+| Complex refactoring | ✓ | Validate |
+| Second opinion | | ✓ |
+| Architecture design | Both | Both |
+| File > 50K tokens | | ✓ |
+
+**AUTH FAILURE HANDLING**:
+If Gemini returns authentication errors:
+1. STOP and inform the user: "Gemini CLI needs re-authentication"
+2. Instruct user to run: `gemini` in terminal and complete Google login
+3. WAIT for user confirmation before retrying
+
+## Model Routing Strategy
+
+Use the right model for the right task:
+
+### Heavy Lifting (Opus 4.5 + Gemini Pro)
+- Architecture design, complex refactoring
+- Security audits, code review of critical systems
+- Debugging complex race conditions
+- Large file analysis (>50K tokens) → Gemini
+
+### Daily Coding (Sonnet 4.5 + Gemini Flash)
+- Feature implementation, writing tests
+- Code generation, documentation
+- Routine bug fixes
+
+### Grunt Work (Haiku 4.5)
+- Code formatting, linting suggestions
+- Simple refactors, JSON/YAML validation
+- Pre-commit validations
+
+**Cost Reference**:
+| Model | Cost/1M tokens | Use When |
+|-------|----------------|----------|
+| Opus 4.5 | $15 | Accuracy critical |
+| Sonnet 4.5 | $3 | Daily work |
+| Haiku 4.5 | $0.25 | Bulk operations |
+| Gemini Flash | ~Free | Large context |
+
+## Parallel Execution (Boris's Technique)
+
+### Git Worktrees for 4-Terminal Parallel Work
+
+```bash
+# Create worktrees for parallel work
+git worktree add ../project-feature-a feature/a
+git worktree add ../project-feature-b feature/b
+git worktree add ../project-tests tests/coverage
+git worktree add ../project-docs docs/update
+
+# Run Claude in each worktree
+cd ../project-feature-a && claude
+```
+
+Or use: `powerkit parallel .`
+
+### Workflow Organization
+| Terminal | Branch | Purpose |
+|----------|--------|---------|
+| T1 | `feature/main-work` | Primary implementation |
+| T2 | `feature/tests` | Test coverage |
+| T3 | `feature/docs` | Documentation |
+| T4 | `fix/bugs` | Bug fixes/cleanup |
+
+## Autonomous Agents
+
+### When to Use Autonomous Loops
+- Large-scale refactoring
+- Test coverage expansion
+- Dependency updates
+- Documentation generation
+
+### Usage
+```bash
+# Using powerkit
+powerkit autonomous "add unit tests until 80% coverage"
+
+# Using Ralph directly
+ralph --monitor
+
+# Using continuous-claude
+continuous-claude --prompt "task" --max-runs 10
+```
+
+### Safety Guidelines
+- Always set limits (--max-runs, --max-cost)
+- Work in git repository with changes committed
+- Review PRs before merging
+- Check SHARED_TASK_NOTES.md for progress
+
+## Senior Engineering Mindset (CRITICAL)
+
+### 1. Plan Before Executing
+- STOP before writing code or running commands
+- Think through the high-level approach first
+- Identify potential failure points and edge cases
+
+### 2. Start Small, Validate, Then Scale
+- NEVER try to do everything at once
+- Perfect ONE thing first
+- Validate it works completely before moving to the next
+
+### 3. Fail Fast, Learn, Adapt
+- If something fails twice the same way, STOP
+- Analyze root cause before retrying
+- Use Gemini for fresh perspective on stuck problems
+
+### 4. Incremental Progress Over Big Bang
+- Break complex tasks into small, verifiable steps
+- Commit/checkpoint after each successful step
+
+### Anti-Patterns to AVOID:
+- Writing all code then testing at the end
+- Generating multiple files before verifying the first works
+- Assuming something works without verification
+- Repeating failed approaches
+
 ## Auto-Plugin System
 
 ### Detection Rules
-When you detect these patterns, suggest or auto-install the relevant plugin:
-
 | Pattern Detected | Plugin to Install |
 |-----------------|-------------------|
 | Python files (.py), pip, poetry | `python-development` |
@@ -57,22 +201,6 @@ When you detect these patterns, suggest or auto-install the relevant plugin:
 | Tests, pytest, jest, TDD | `tdd-workflows` |
 | Security audit, OWASP, auth | `security-compliance` |
 | ML, PyTorch, TensorFlow | `machine-learning-ops` |
-| Database schema, SQL, migrations | `database-design` |
-| CI/CD, GitHub Actions, pipelines | `deployment-strategies` |
-| Business analysis, metrics | `business-analytics` |
-| Video, ffmpeg, media processing | Use video-creator skills |
-
-### Auto-Install Command
-```bash
-/plugin install <plugin-name>
-```
-
-### Full-Stack Essentials (Pre-install these)
-For full-stack development, these should be active:
-- `full-stack-orchestration`
-- `api-scaffolding`
-- `tdd-workflows`
-- `code-review-ai`
 
 ## Skills Available (800+)
 
@@ -88,15 +216,6 @@ Skills auto-activate based on context. Key categories:
 ### Documents (anthropics-skills)
 - `pdf`, `docx`, `pptx`, `xlsx` - Document generation
 - `mcp-builder` - Create MCP servers
-
-### Full-Stack (wshobson - 67 plugins)
-- Backend, frontend, DevOps, security, data
-
-### Scientific (K-Dense-AI - 139 skills)
-- Bioinformatics, data science, chemistry
-
-### Business (alirezarezvani - 36 skills)
-- CEO/CTO advisors, engineering roles, compliance
 
 ## Agents Available (251)
 
@@ -132,20 +251,10 @@ Use via Task tool with `subagent_type` parameter:
 3. Document findings: `context_save` with category "note"
 4. Use verification-before-completion
 
-### For Code Review
-1. Use code-reviewer or pr-reviewer agent
-2. Check Context7 for best practices
-3. Follow receiving-code-review skill
-4. Save decisions: `context_save` with category "decision"
-
 ### Session Management
 **Start of session**:
 - `context_session_start` with descriptive name
 - `context_get` to check for pending work
-
-**During work**:
-- `context_save` key decisions and progress
-- `context_checkpoint` before major changes
 
 **End of session**:
 - `context_prepare_compaction`
@@ -159,175 +268,34 @@ Use via Task tool with `subagent_type` parameter:
 - Security review for auth/data handling
 - Save important decisions to memory-keeper
 
-## Video Generation Pipeline
-
-For video work, use skills from:
-- `tillo13-ai-video-creator` - Flux + RunwayML + Suno
-- `davide97l-ai-video-generator` - FFmpeg + MoviePy
-
 ## Entrepreneur Mode (Solo Founder / Indie Hacker)
 
 ### Market Research MCPs (Always Active)
 
-**Reddit Research** - Problem discovery & validation:
-- Scrape pain points from target subreddits
-- Find "I wish there was..." and "I hate when..." posts
-- Analyze competitor discussions
-- Identify underserved niches
-
-**HackerNews** - Tech trends & startup signals:
-- Track Show HN launches and reception
-- Identify emerging technologies
-- Find technical co-founder perspectives
-- Spot B2B opportunities
-
-**Firecrawl** - Competitive intelligence:
-- Scrape competitor websites
-- Extract pricing pages
-- Analyze feature lists
-- Monitor landing page changes
+**Reddit Research** - Problem discovery & validation
+**HackerNews** - Tech trends & startup signals
+**Jina** - Competitive intelligence (free, no API key)
 
 ### Problem Discovery Workflow
-
-1. **Identify Pain Points**:
-   ```
-   Use reddit MCP → search subreddits for complaints
-   Use hackernews MCP → find frustrated comments
-   Save findings: context_save with category "note", key "pain-points-{domain}"
-   ```
-
-2. **Validate Problem Size**:
-   ```
-   Search volume analysis (use seo MCP)
-   Reddit subscriber counts in relevant subreddits
-   Competitor revenue estimates (search for "revenue", "MRR", "ARR")
-   ```
-
-3. **Document Insights**:
-   ```
-   context_journal_entry with tags: ["market-research", "{product-name}"]
-   context_link source problems to potential solutions
-   ```
-
-### Competitive Analysis Workflow
-
-1. **Identify Competitors**:
-   - Search ProductHunt for similar launches
-   - Reddit mentions of alternatives
-   - Google "best {category} tools"
-
-2. **Deep Dive Analysis**:
-   ```
-   Use jina or firecrawl → scrape competitor sites
-   Extract: pricing, features, positioning, testimonials
-   Save: context_save key "competitor-{name}" category "note"
-   ```
-
-3. **Find Gaps**:
-   - Missing features from user complaints
-   - Pricing tier gaps
-   - Underserved segments
-   - Poor UX areas
-
-### Cutthroat Tactics & Hacks
-
-**Idea Validation (Before Building)**:
-- Create landing page, run $50 ads, measure signups
-- Post in relevant subreddits asking "would you pay for X?"
-- DM 20 potential customers, offer early access
-
-**Launch Hacks**:
-- ProductHunt launch checklist (hunter, timing, assets)
-- HackerNews Show HN best practices
-- Reddit soft launches in relevant communities
-- Twitter/X build in public threads
-
-**Growth Hacks**:
-- SEO content targeting competitor keywords
-- Lifetime deals for early traction
-- Affiliate programs for distribution
-- Integration partnerships
-
-**Pricing Strategy**:
-- Use `pricing-strategist` agent for optimization
-- Analyze competitor pricing with jina/firecrawl
-- Test pricing with landing page variants
-
-### SaaS Building Workflow
-
-**Phase 1: Validation (1-2 weeks)**
-1. Problem research with Reddit/HN MCPs
-2. Competitor analysis with Firecrawl
-3. Landing page + waitlist
-4. 20 customer interviews
-5. Decision: Build or pivot
-
-**Phase 2: MVP (2-4 weeks)**
-1. Use `/setup-boilerplate` from saas-starter
-2. Core feature only (no polish)
-3. Deploy to production immediately
-4. Get 5 paying customers
-
-**Phase 3: Product-Market Fit**
-1. Track retention metrics
-2. Weekly customer calls
-3. Iterate based on feedback
-4. Hit 40% "very disappointed" threshold
-
-**Phase 4: Growth**
-1. Content marketing (SEO)
-2. Paid acquisition experiments
-3. Referral/affiliate programs
-4. Feature expansion based on data
+1. Use reddit MCP → search subreddits for complaints
+2. Use hackernews MCP → find frustrated comments
+3. Save findings: `context_save` with category "note"
 
 ### Business Agents Available
-
-| Task | Agent | Use For |
-|------|-------|---------|
-| Strategy | `ceo-advisor` | Board prep, fundraising, pivots |
-| Technical | `cto-advisor` | Architecture, hiring, tech debt |
-| Marketing | `marketing-strategy-pmm` | GTM, positioning, messaging |
-| Pricing | `pricing-strategist` | Pricing tiers, competitor analysis |
-| Competition | `competitive-analyst` | Market mapping, SWOT |
-| Growth | `growth-hacker` | Acquisition, activation, retention |
-| Product | `product-manager` | Roadmap, prioritization |
-| Research | `market-researcher` | TAM/SAM/SOM, trends |
-
-### Quick Commands
-
-```bash
-# Install The Agentic Startup
-/plugin marketplace add rsmdt/the-startup
-/plugin install start@the-startup
-
-# Start new product research
-# (Claude will use Reddit, HN, Firecrawl MCPs automatically)
-
-# Generate SaaS boilerplate
-/setup-boilerplate
-```
-
-### Decision Tracking
-
-All business decisions should be saved for continuity:
-```
-context_save key: "decision-{date}-{topic}"
-category: "decision"
-priority: "high"
-value: "Decision made, rationale, alternatives considered"
-```
-
-### Reference Resources
-
-Installed awesome lists for reference:
-- `awesome-indiehackers` - Complete toolkit
-- `awesome-indie` - Making money as dev
-- `awesome-saas-boilerplates` - Starter templates
-- `awesome-opensource-boilerplates` - Free foundations
+| Task | Agent |
+|------|-------|
+| Strategy | `ceo-advisor` |
+| Technical | `cto-advisor` |
+| Marketing | `marketing-strategy-pmm` |
+| Pricing | `pricing-strategist` |
+| Competition | `competitive-analyst` |
+| Growth | `growth-hacker` |
 
 ## Updates
 
 Run periodically:
 ```bash
+powerkit update
+# Or
 ~/.claude/update-skills.sh
 ```

@@ -9,8 +9,9 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
       "env": {
-        "MEMORY_FILE_PATH": "/Users/fsd/.claude/memory.json"
+        "MEMORY_FILE_PATH": "__HOME__/.claude/memory.json"
       },
+      "_note": "Replace __HOME__ with actual home directory during setup",
       "description": "Persistent memory and context management"
     },
     "github": {
