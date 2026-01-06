@@ -1,1 +1,8 @@
 .claude-code-sandbox
+.DS_Store
+
+# Unrelated files (from other sessions)
+*-STRATEGY.md
+*-ASSETS.md
+*-CONSENSUS.md
+SINGULARITY-*.md

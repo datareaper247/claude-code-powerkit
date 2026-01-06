@@ -1,0 +1,87 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Session started in $(pwd)\" >> ~/.claude/session.log"
+          },
+          {
+            "type": "command",
+            "command": "echo 'Loading context from memory-keeper...' && timeout 2 echo 'context_get category: progress' || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json,sys; d=json.load(sys.stdin); p=d.get('tool_input',{}).get('file_path',''); blocked=['.env','.env.','.git/','node_modules/','__pycache__']; sys.exit(2 if any(b in p for b in blocked) else 0)\" 2>/dev/null || echo 'Blocked: protected file'",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json,sys; d=json.load(sys.stdin); cmd=d.get('tool_input',{}).get('command',''); dangerous=['rm -rf /','sudo rm',':(){:|:&};:','> /dev/sda','mkfs','dd if=','chmod -R 777 /']; sys.exit(2 if any(x in cmd for x in dangerous) else 0)\" 2>/dev/null || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE_PATH=$(cat | python3 -c \"import json,sys; print(json.load(sys.stdin).get('tool_result',{}).get('file_path',''))\" 2>/dev/null); if [ -n \"$FILE_PATH\" ]; then case \"$FILE_PATH\" in *.ts|*.tsx|*.js|*.jsx) npx prettier --write \"$FILE_PATH\" 2>/dev/null || true;; *.py) ruff format \"$FILE_PATH\" 2>/dev/null || black \"$FILE_PATH\" 2>/dev/null || true;; *.go) gofmt -w \"$FILE_PATH\" 2>/dev/null || true;; esac; fi",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] File modified\" >> ~/.claude/changes.log"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before stopping, verify:\n1. All TODO items marked complete or documented\n2. No uncommitted changes that should be committed\n3. Context saved to memory-keeper if important decisions made\n\nIf all verified, respond: {\"decision\": \"approve\", \"reason\": \"verified\"}\nIf not, respond: {\"decision\": \"block\", \"reason\": \"[what needs to be done]\"}"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Verify subagent task completion. Check:\n1. Original task requirements met\n2. No hallucinated paths/functions\n3. Code compiles/lints if applicable\n\nRespond: {\"decision\": \"approve|block\", \"reason\": \"...\"}"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Saving context before compaction...' && echo 'context_prepare_compaction'"
+          }
+        ]
+      }
+    ]
+  }
+}
