@@ -433,7 +433,8 @@ cmd_full() {
             echo "${YELLOW}Note:${NC} For Docker isolation, use 'powerkit sandbox' instead"
         fi
         echo ""
-        exec happy "$@"
+        # Use 'command' to bypass any shell aliases (e.g., alias happy='happy claude')
+        exec command happy "$@"
     elif $has_sandbox; then
         warn "Happy Coder not installed. Using sandbox mode (Docker isolation)."
         exec "$SCRIPTS_DIR/powerkit-sandbox.sh" "$@"
@@ -653,7 +654,8 @@ cmd_happy() {
     info "Starting Happy Coder (mobile-enabled session)"
     echo "Scan the QR code with the Happy mobile app to connect"
     echo ""
-    exec happy "$@"
+    # Use 'command' to bypass any shell aliases
+    exec command happy "$@"
 }
 
 # Update command
